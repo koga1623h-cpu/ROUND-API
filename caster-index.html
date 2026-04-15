@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>キャスター調査</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap');
+:root{
+  --bg:#0b0e14;--surface:#13161f;--surface2:#1c2030;--border:#252a3a;
+  --ok:#3dd68c;--warn:#f5a623;--ng:#f04f4f;--idle:#3a3f52;
+  --accent:#4f8ef7;--text:#dde2f0;--text2:#6b7390;--radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{height:-webkit-fill-available;}
+body{
+  min-height:100vh;min-height:-webkit-fill-available;
+  background:var(--bg);color:var(--text);
+  font-family:'Noto Sans JP',sans-serif;-webkit-text-size-adjust:100%;
+  padding-bottom:calc(16px + env(safe-area-inset-bottom));
+}
+
+/* ── HEADER ── */
+header{
+  position:sticky;top:0;z-index:100;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));
+  display:flex;align-items:center;gap:10px;
+}
+header h1{font-size:15px;font-weight:700;flex:1;}
+.hbadge{background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;}
+
+/* ── TABS ── */
+.tabs{
+  display:flex;background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:53px;z-index:99;
+}
+.tab{
+  flex:1;padding:12px 2px;text-align:center;font-size:11px;font-weight:500;
+  color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;
+}
+.tab.active{color:var(--accent);border-color:var(--accent);}
+
+/* ── PAGES ── */
+.page{display:none;padding:16px;}
+.page.active{display:block;}
+
+/* ── CARD ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;}
+.card-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+
+/* ── FORM ── */
+label{font-size:13px;color:var(--text2);display:block;margin-bottom:5px;}
+select,input[type=text]{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-family:inherit;font-size:16px;
+  padding:10px 12px;-webkit-appearance:none;appearance:none;min-height:44px;
+}
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%236b7390'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;
+}
+.form-row{margin-bottom:12px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+
+/* ── BED DIAGRAM ── */
+.bed-wrap{
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 0 16px;
+}
+.bed-label-top{
+  font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.1em;
+  margin-bottom:10px;text-align:center;
+}
+.bed-label-bottom{
+  font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.1em;
+  margin-top:10px;text-align:center;
+}
+.bed-row{display:flex;align-items:center;gap:0;}
+.bed-side-label{
+  font-size:10px;color:var(--text2);font-weight:700;width:28px;text-align:center;
+  writing-mode:vertical-rl;letter-spacing:.1em;
+}
+
+/* ── BED SVG FRAME ── */
+.bed-frame{
+  position:relative;
+  width:220px;height:300px;
+  flex-shrink:0;
+}
+.bed-frame svg{width:100%;height:100%;}
+
+/* ── CASTER BUTTONS ── */
+.caster-btn{
+  position:absolute;
+  width:56px;height:56px;
+  border-radius:12px;
+  border:2.5px solid var(--idle);
+  background:var(--surface2);
+  cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;
+  transition:all .18s;
+  -webkit-appearance:none;
+  font-family:inherit;
+}
+.caster-btn .c-icon{font-size:22px;line-height:1;}
+.caster-btn .c-label{font-size:9px;font-weight:700;color:var(--text2);transition:color .18s;}
+
+/* 位置 */
+.caster-btn.head-left { top:8px;  left:8px; }
+.caster-btn.head-right{ top:8px;  right:8px;}
+.caster-btn.foot-left { bottom:8px;left:8px; }
+.caster-btn.foot-right{ bottom:8px;right:8px;}
+
+/* 状態色 */
+.caster-btn.s-正常{
+  border-color:var(--ok);background:rgba(61,214,140,.1);
+}
+.caster-btn.s-正常 .c-label{color:var(--ok);}
+.caster-btn.s-要注意{
+  border-color:var(--warn);background:rgba(245,166,35,.1);
+}
+.caster-btn.s-要注意 .c-label{color:var(--warn);}
+.caster-btn.s-要交換{
+  border-color:var(--ng);background:rgba(240,79,79,.1);
+}
+.caster-btn.s-要交換 .c-label{color:var(--ng);}
+
+/* タップ ripple */
+.caster-btn:active{transform:scale(.93);}
+
+/* ── STATUS LEGEND ── */
+.legend{display:flex;justify-content:center;gap:16px;margin-bottom:16px;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
+.leg-dot{width:10px;height:10px;border-radius:50%;}
+
+/* ── SUMMARY CHIPS ── */
+.caster-summary{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;
+}
+.c-chip{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;display:flex;justify-content:space-between;align-items:center;
+}
+.c-chip-name{font-size:12px;color:var(--text2);}
+.c-chip-val{font-size:12px;font-weight:700;}
+.c-chip-val.s-正常 {color:var(--ok);}
+.c-chip-val.s-要注意{color:var(--warn);}
+.c-chip-val.s-要交換{color:var(--ng);}
+.c-chip-val.s-未選択{color:var(--text2);}
+
+/* ── BUTTONS ── */
+.btn{
+  display:block;width:100%;padding:14px;border-radius:var(--radius);
+  font-size:15px;font-weight:700;cursor:pointer;border:none;
+  text-align:center;transition:opacity .15s;font-family:inherit;
+}
+.btn:active{opacity:.75;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-success{background:var(--ok);color:#111;}
+.btn-danger{background:var(--ng);color:#fff;}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2);font-size:13px;padding:10px;}
+.btn-sm{font-size:13px;padding:9px 14px;width:auto;display:inline-block;}
+.mt8{margin-top:8px;}
+
+/* ── LIST ── */
+.rec{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;position:relative;}
+.rec-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.rec-hospital{font-size:13px;font-weight:700;}
+.rec-loc{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);}
+.rec-casters{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;}
+.rc-item{font-size:11px;display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border-radius:6px;padding:4px 8px;}
+.rc-pos{color:var(--text2);}
+.rc-val{font-weight:700;}
+.rc-val.s-正常 {color:var(--ok);}
+.rc-val.s-要注意{color:var(--warn);}
+.rc-val.s-要交換{color:var(--ng);}
+.rec-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.worst-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.wb-正常 {background:rgba(61,214,140,.2); color:var(--ok);}
+.wb-要注意{background:rgba(245,166,35,.2);color:var(--warn);}
+.wb-要交換{background:rgba(240,79,79,.2); color:var(--ng);}
+.rec-date{font-size:11px;color:var(--text2);}
+.del-btn{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:4px 8px;min-height:40px;line-height:1;}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px;text-align:center;}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;}
+.stat-label{font-size:11px;color:var(--text2);margin-top:3px;}
+.bar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+.bar-track{background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;}
+.bar-fill{height:100%;border-radius:4px;transition:width .5s;}
+
+/* ── FILTER ── */
+.filter-bar{display:flex;gap:8px;margin-bottom:12px;}
+.filter-bar select{flex:1;font-size:13px;padding:8px 10px;}
+
+/* ── MASTER EDITOR ── */
+.part-row{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);}
+.part-row:last-child{border-bottom:none;}
+.part-label{flex:1;font-size:14px;}
+.part-input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--accent);color:var(--text);font-family:inherit;font-size:14px;padding:3px 4px;min-height:unset;border-radius:0;-webkit-appearance:none;}
+.part-input:focus{outline:none;}
+.icon-btn{background:none;border:none;cursor:pointer;font-size:18px;padding:4px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px;}
+.icon-btn:active{background:var(--surface2);}
+.add-row{display:flex;gap:8px;margin-top:10px;}
+.add-row input{flex:1;font-size:14px;padding:8px 10px;}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:48px 20px;color:var(--text2);font-size:13px;}
+.empty-icon{font-size:40px;margin-bottom:10px;}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));
+  left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--ok);color:#111;font-size:13px;font-weight:700;
+  padding:10px 22px;border-radius:20px;z-index:999;
+  transition:transform .3s;white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── PARTS TABLE ── */
+.parts-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px;}
+table.pt{width:100%;border-collapse:collapse;min-width:240px;}
+table.pt th{font-size:10px;color:var(--text2);font-weight:700;padding:5px 3px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;}
+table.pt th:first-child{text-align:left;padding-left:4px;}
+table.pt td{padding:4px 3px;vertical-align:middle;}
+table.pt td:first-child{font-size:13px;padding-left:4px;word-break:break-all;}
+.sev-chip{display:block;width:100%;min-height:36px;line-height:36px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;text-align:center;cursor:pointer;transition:all .15s;padding:0;min-width:38px;-webkit-appearance:none;appearance:none;font-family:inherit;}
+.sev-chip.a-軽微 {border-color:var(--ok);    background:rgba(61,214,140,.18);color:var(--ok);}
+.sev-chip.a-中程度{border-color:var(--warn);  background:rgba(245,166,35,.18); color:var(--warn);}
+.sev-chip.a-重大  {border-color:var(--ng);    background:rgba(240,79,79,.18);  color:var(--ng);}
+
+textarea{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-family:inherit;font-size:16px;
+  padding:10px 12px;resize:vertical;min-height:72px;-webkit-appearance:none;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:20px">🔵</span>
+  <h1>キャスター調査</h1>
+  <span class="hbadge" id="totalBadge">0件</span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('input')">📝 入力</div>
+  <div class="tab"        onclick="switchTab('list')">📋 一覧</div>
+  <div class="tab"        onclick="switchTab('summary')">📊 集計</div>
+  <div class="tab"        onclick="switchTab('export')">💾 出力</div>
+  <div class="tab"        onclick="switchTab('master')">⚙️ 基本情報</div>
+</div>
+
+<!-- ===== 入力 ===== -->
+<div id="page-input" class="page active">
+
+  <div class="card">
+    <div class="card-title">📍 基本情報</div>
+    <div class="form-row">
+      <label>病院名</label>
+      <select id="inp-hospital"></select>
+    </div>
+    <div class="row3">
+      <div>
+        <label>病棟</label>
+        <input type="text" id="inp-ward" placeholder="例: 3東">
+      </div>
+      <div>
+        <label>部屋番号</label>
+        <input type="text" id="inp-room" placeholder="例: 301">
+      </div>
+      <div>
+        <label>ベッド番号</label>
+        <input type="text" id="inp-bed" placeholder="例: A" style="font-family:'JetBrains Mono',monospace">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>ベッド型番</label>
+      <select id="inp-model"></select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔵 キャスター状態</div>
+
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:var(--idle)"></div>未選択</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--ok)"></div>正常</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--warn)"></div>要注意</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--ng)"></div>要交換</div>
+    </div>
+
+    <div class="bed-wrap">
+      <div class="bed-label-top">── 頭 側 ──</div>
+
+      <div class="bed-row">
+        <div class="bed-side-label">左</div>
+
+        <div class="bed-frame">
+          <!-- ベッドの絵（SVG） -->
+          <svg viewBox="0 0 220 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- フレーム -->
+            <rect x="30" y="20" width="160" height="260" rx="10" fill="#1c2030" stroke="#2e3550" stroke-width="2.5"/>
+            <!-- ヘッドボード -->
+            <rect x="30" y="20" width="160" height="28" rx="8" fill="#252a3a"/>
+            <!-- フットボード -->
+            <rect x="30" y="252" width="160" height="28" rx="8" fill="#252a3a"/>
+            <!-- マットレス -->
+            <rect x="38" y="54" width="144" height="192" rx="6" fill="#181c28" stroke="#2e3550" stroke-width="1.5"/>
+            <!-- 枕 -->
+            <rect x="52" y="64" width="116" height="44" rx="8" fill="#1f2435" stroke="#2e3550" stroke-width="1.5"/>
+            <!-- 掛け布団 -->
+            <rect x="42" y="118" width="136" height="118" rx="6" fill="#1e2438" stroke="#2e3550" stroke-width="1.5"/>
+            <!-- 布団のしわ線 -->
+            <line x1="70"  y1="118" x2="70"  y2="236" stroke="#252a3a" stroke-width="1" stroke-dasharray="3 5"/>
+            <line x1="110" y1="118" x2="110" y2="236" stroke="#252a3a" stroke-width="1" stroke-dasharray="3 5"/>
+            <line x1="150" y1="118" x2="150" y2="236" stroke="#252a3a" stroke-width="1" stroke-dasharray="3 5"/>
+            <!-- 人物：頭（枕の上） -->
+            <circle cx="110" cy="82" r="18" fill="#2a3048" stroke="#3a4060" stroke-width="1.5"/>
+            <!-- 髪の毛ライン -->
+            <path d="M93 78 Q110 68 127 78" stroke="#4a5278" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <!-- 顔のパーツ（目） -->
+            <ellipse cx="103" cy="82" rx="3" ry="2.5" fill="#6b7390"/>
+            <ellipse cx="117" cy="82" rx="3" ry="2.5" fill="#6b7390"/>
+            <!-- 鼻 -->
+            <path d="M109 85 Q110 88 111 85" stroke="#6b7390" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+            <!-- 口（穏やか） -->
+            <path d="M105 91 Q110 94 115 91" stroke="#6b7390" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+            <!-- 人物：肩ライン（布団から出ている） -->
+            <path d="M60 118 Q80 112 110 112 Q140 112 160 118" stroke="#2a3048" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <!-- 人物：体シルエット（布団の下） -->
+            <ellipse cx="110" cy="175" rx="34" ry="48" fill="#1a1f30" opacity="0.6"/>
+            <!-- キャスター位置インジケーター（角の丸） -->
+            <circle cx="50" cy="40" r="6" fill="#2e3550"/>
+            <circle cx="170" cy="40" r="6" fill="#2e3550"/>
+            <circle cx="50" cy="260" r="6" fill="#2e3550"/>
+            <circle cx="170" cy="260" r="6" fill="#2e3550"/>
+          </svg>
+
+          <!-- キャスターボタン -->
+          <button class="caster-btn head-left"  id="c-HL" onclick="cycleCaster('HL')">
+            <span class="c-icon">⚙️</span>
+            <span class="c-label" id="cl-HL">未選択</span>
+          </button>
+          <button class="caster-btn head-right" id="c-HR" onclick="cycleCaster('HR')">
+            <span class="c-icon">⚙️</span>
+            <span class="c-label" id="cl-HR">未選択</span>
+          </button>
+          <button class="caster-btn foot-left"  id="c-FL" onclick="cycleCaster('FL')">
+            <span class="c-icon">⚙️</span>
+            <span class="c-label" id="cl-FL">未選択</span>
+          </button>
+          <button class="caster-btn foot-right" id="c-FR" onclick="cycleCaster('FR')">
+            <span class="c-icon">⚙️</span>
+            <span class="c-label" id="cl-FR">未選択</span>
+          </button>
+        </div>
+
+        <div class="bed-side-label">右</div>
+      </div>
+
+      <div class="bed-label-bottom">── 足 側 ──</div>
+    </div>
+
+    <!-- 状態サマリー -->
+    <div class="caster-summary">
+      <div class="c-chip">
+        <span class="c-chip-name">頭側・左</span>
+        <span class="c-chip-val s-未選択" id="cs-HL">未選択</span>
+      </div>
+      <div class="c-chip">
+        <span class="c-chip-name">頭側・右</span>
+        <span class="c-chip-val s-未選択" id="cs-HR">未選択</span>
+      </div>
+      <div class="c-chip">
+        <span class="c-chip-name">足側・左</span>
+        <span class="c-chip-val s-未選択" id="cs-FL">未選択</span>
+      </div>
+      <div class="c-chip">
+        <span class="c-chip-name">足側・右</span>
+        <span class="c-chip-val s-未選択" id="cs-FR">未選択</span>
+      </div>
+    </div>
+
+    <!-- 一括設定 -->
+    <div style="display:flex;gap:8px;margin-bottom:4px">
+      <button class="btn btn-outline btn-sm" style="flex:1;font-size:11px" onclick="setAll('正常')">全て正常</button>
+      <button class="btn btn-outline btn-sm" style="flex:1;font-size:11px;border-color:var(--warn);color:var(--warn)" onclick="setAll('要注意')">全て要注意</button>
+      <button class="btn btn-outline btn-sm" style="flex:1;font-size:11px;border-color:var(--ng);color:var(--ng)" onclick="setAll('要交換')">全て要交換</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔧 その他の破損部位</div>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:10px">各部位のボタンをタップして程度を選んでください</p>
+    <div class="parts-wrap">
+      <table class="pt">
+        <thead>
+          <tr>
+            <th style="min-width:80px">部位</th>
+            <th>軽微</th>
+            <th>中程度</th>
+            <th>重大</th>
+          </tr>
+        </thead>
+        <tbody id="partsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📝 メモ</div>
+    <textarea id="inp-memo" placeholder="特記事項など..."></textarea>
+  </div>
+
+  <button class="btn btn-primary" onclick="saveRecord()">✅ 記録を保存</button>
+  <button class="btn btn-outline mt8" onclick="clearForm()">クリア</button>
+</div>
+
+<!-- ===== 一覧 ===== -->
+<div id="page-list" class="page">
+  <div class="filter-bar">
+    <select id="filter-hospital" onchange="renderList()">
+      <option value="">すべての病院</option>
+    </select>
+    <select id="filter-worst" onchange="renderList()">
+      <option value="">すべての状態</option>
+      <option>正常</option><option>要注意</option><option>要交換</option>
+    </select>
+  </div>
+  <div id="listContainer"></div>
+</div>
+
+<!-- ===== 集計 ===== -->
+<div id="page-summary" class="page">
+  <div class="stats-grid">
+    <div class="stat-box"><div class="stat-num" style="color:var(--accent)" id="s-total">0</div><div class="stat-label">総件数</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--accent)" id="s-hospitals">0</div><div class="stat-label">病院数</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--ng)"   id="s-ng">0</div><div class="stat-label">要交換キャスター</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--warn)" id="s-warn">0</div><div class="stat-label">要注意キャスター</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔵 位置別 要交換件数</div>
+    <div id="posStats"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🏥 病院別件数</div>
+    <div id="hospitalStats"></div>
+  </div>
+</div>
+
+<!-- ===== 出力 ===== -->
+<div id="page-export" class="page">
+  <div class="card">
+    <div class="card-title">💾 CSV出力</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.8">
+      4つのキャスターが<strong style="color:var(--text)">各1列</strong>で出力されます。<br>
+      値は「正常 / 要注意 / 要交換 / 空白」です。
+    </p>
+    <button class="btn btn-success" onclick="exportCSV()">📥 CSVをダウンロード</button>
+  </div>
+  <div class="card">
+    <div class="card-title" style="color:var(--ng)">🗑 データ削除</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">すべての記録を削除します。元に戻せません。</p>
+    <button class="btn btn-danger" onclick="clearAll()">全データを削除</button>
+  </div>
+</div>
+
+<!-- ===== 基本情報 ===== -->
+<div id="page-master" class="page">
+  <div class="card">
+    <div class="card-title">🏥 病院名リスト</div>
+    <div id="hospitalsEditor"></div>
+    <div class="add-row">
+      <input type="text" id="new-hospital-mgr" placeholder="病院名を追加...">
+      <button class="btn btn-outline btn-sm" onclick="addHospitalMgr()">追加</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🏷 ベッド型番リスト</div>
+    <div id="modelsEditor"></div>
+    <div class="add-row">
+      <input type="text" id="new-model-mgr" placeholder="型番を追加...">
+      <button class="btn btn-outline btn-sm" onclick="addModelMgr()">追加</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔧 破損部位リスト</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px">✏️で名前を編集、×で削除できます</p>
+    <div id="partsEditor"></div>
+    <div class="add-row">
+      <input type="text" id="new-part-mgr" placeholder="部位を追加...">
+      <button class="btn btn-outline btn-sm" onclick="addPartMgr()">追加</button>
+    </div>
+  </div>
+  <div class="card" style="background:rgba(245,166,35,.06);border-color:rgba(245,166,35,.3)">
+    <div class="card-title" style="color:var(--warn)">⚠️ 注意</div>
+    <p style="font-size:12px;color:var(--text2);line-height:1.8">部位を削除しても既存の記録は残ります。<br>CSV出力の列は出力時点の部位リストに基づきます。</p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────
+const CASTER_POSITIONS = [
+  {id:'HL', label:'頭側・左'},
+  {id:'HR', label:'頭側・右'},
+  {id:'FL', label:'足側・左'},
+  {id:'FR', label:'足側・右'},
+];
+const CASTER_STATES = ['未選択','正常','要注意','要交換'];
+const CASTER_ICONS  = {'未選択':'⚙️','正常':'✅','要注意':'⚠️','要交換':'🔴'};
+
+const DEFAULT_HOSPITALS = ['那覇市立病院','沖縄赤十字病院','県立中部病院','浦添総合病院'];
+const DEFAULT_MODELS    = ['パラマウント SF-836WC','パラマウント SF-837WC','フランスベッド MA-551','フランスベッド MA-501'];
+const DEFAULT_PARTS     = ['サイドレール','背ボード','足ボード','マットレス','フレーム','電動モーター','リモコン','ナースコール','柵ロック'];
+const SEVS = ['軽微','中程度','重大'];
+
+let st = JSON.parse(localStorage.getItem('casterInspect')||'null') || {
+  records:[], hospitals:[...DEFAULT_HOSPITALS], models:[...DEFAULT_MODELS], parts:[...DEFAULT_PARTS]
+};
+if(!st.parts) st.parts = [...DEFAULT_PARTS];
+
+// 現在の入力状態
+let formCasters = {HL:'未選択', HR:'未選択', FL:'未選択', FR:'未選択'};
+let formSev = {}; // { partName: sev | '' }
+
+function persist(){ localStorage.setItem('casterInspect', JSON.stringify(st)); }
+
+// ── BOOT ──────────────────────────────────────────────
+renderHospitalOptions();
+renderModelOptions();
+renderPartsInputTable();
+renderList();
+renderSummary();
+renderHospitalsEditor();
+renderModelsEditor();
+renderPartsEditor();
+updateBadge();
+updateCasterUI();
+
+function updateBadge(){
+  document.getElementById('totalBadge').textContent = st.records.length + '件';
+}
+
+// ── TABS ──────────────────────────────────────────────
+function switchTab(name){
+  const names=['input','list','summary','export','master'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(name==='list')   renderList();
+  if(name==='summary') renderSummary();
+  if(name==='master'){ renderHospitalsEditor(); renderModelsEditor(); renderPartsEditor(); }
+}
+
+// ── CASTER INPUT ──────────────────────────────────────
+function cycleCaster(pos){
+  const cur = CASTER_STATES.indexOf(formCasters[pos]);
+  formCasters[pos] = CASTER_STATES[(cur+1) % CASTER_STATES.length];
+  updateCasterUI();
+}
+function setAll(state){
+  Object.keys(formCasters).forEach(k=>formCasters[k]=state);
+  updateCasterUI();
+}
+function updateCasterUI(){
+  CASTER_POSITIONS.forEach(({id})=>{
+    const state = formCasters[id];
+    const btn   = document.getElementById('c-'+id);
+    const lbl   = document.getElementById('cl-'+id);
+    const chip  = document.getElementById('cs-'+id);
+
+    // ボタン
+    btn.className = 'caster-btn ' + posClass(id) + (state!=='未選択' ? ' s-'+state : '');
+    btn.querySelector('.c-icon').textContent = CASTER_ICONS[state];
+    lbl.textContent = state;
+
+    // チップ
+    chip.textContent = state;
+    chip.className   = 'c-chip-val s-'+state;
+  });
+}
+function posClass(id){
+  return {HL:'head-left',HR:'head-right',FL:'foot-left',FR:'foot-right'}[id];
+}
+
+// ── SAVE ──────────────────────────────────────────────
+function saveRecord(){
+  const hospital = document.getElementById('inp-hospital').value;
+  const ward     = document.getElementById('inp-ward').value.trim();
+  const room     = document.getElementById('inp-room').value.trim();
+  const bed      = document.getElementById('inp-bed').value.trim();
+  const model    = document.getElementById('inp-model').value;
+  const memo     = document.getElementById('inp-memo').value.trim();
+
+  if(!hospital){ showToast('⚠️ 病院名を選択してください',true); return; }
+  if(!ward&&!room&&!bed){ showToast('⚠️ 病棟・部屋・ベッドのいずれかを入力してください',true); return; }
+
+  const allUnset = Object.values(formCasters).every(v=>v==='未選択');
+  if(allUnset){ showToast('⚠️ 少なくとも1つのキャスターを選択してください',true); return; }
+
+  // 最悪状態
+  const order = {'要交換':3,'要注意':2,'正常':1,'未選択':0};
+  const worst = Object.values(formCasters).reduce((a,v)=>order[v]>order[a]?v:a,'未選択');
+
+  st.records.unshift({
+    id: Date.now(),
+    date: new Date().toLocaleDateString('ja-JP'),
+    time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+    hospital, ward, room, bed, model, memo,
+    worst,
+    casters: {...formCasters},
+    partsSev: {...formSev}
+  });
+  persist(); updateBadge(); clearForm();
+  showToast('✅ 保存しました！');
+}
+
+function clearForm(){
+  document.getElementById('inp-hospital').value='';
+  document.getElementById('inp-ward').value='';
+  document.getElementById('inp-room').value='';
+  document.getElementById('inp-bed').value='';
+  document.getElementById('inp-model').value='';
+  document.getElementById('inp-memo').value='';
+  formCasters={HL:'未選択',HR:'未選択',FL:'未選択',FR:'未選択'};
+  formSev={};
+  updateCasterUI();
+  renderPartsInputTable();
+}
+
+// ── LIST ──────────────────────────────────────────────
+function renderList(){
+  const fh = document.getElementById('filter-hospital')?.value||'';
+  const fw = document.getElementById('filter-worst')?.value||'';
+  let recs = st.records;
+  if(fh) recs=recs.filter(r=>r.hospital===fh);
+  if(fw) recs=recs.filter(r=>r.worst===fw);
+  const c = document.getElementById('listContainer');
+  if(!recs.length){ c.innerHTML='<div class="empty"><div class="empty-icon">📋</div>記録がありません</div>'; return; }
+  c.innerHTML=recs.map(r=>{
+    const loc=[r.ward?r.ward+'病棟':'',r.room?r.room+'号室':'',r.bed?'ベッド '+r.bed:''].filter(Boolean).join(' ');
+    const castHtml=CASTER_POSITIONS.map(({id,label})=>`
+      <div class="rc-item">
+        <span class="rc-pos">${label}</span>
+        <span class="rc-val s-${r.casters[id]||'未選択'}">${CASTER_ICONS[r.casters[id]||'未選択']} ${r.casters[id]||'未選択'}</span>
+      </div>`).join('');
+    return `<div class="rec">
+      <button class="del-btn" onclick="deleteRecord(${r.id})">×</button>
+      <div class="rec-top">
+        <div class="rec-hospital">${r.hospital}</div>
+        <div class="rec-loc">🛏 ${loc||'－'}</div>
+      </div>
+      ${r.model?`<div style="font-size:11px;color:var(--accent);margin-bottom:6px">📋 ${r.model}</div>`:''}
+      <div class="rec-casters">${castHtml}</div>
+      ${Object.entries(r.partsSev||{}).filter(([,v])=>v).length ? `
+      <div style="font-size:11px;color:var(--text2);margin-top:6px;line-height:1.8">🔧 ${Object.entries(r.partsSev||{}).filter(([,v])=>v).map(([k,v])=>`<span style="color:var(--text)">${k}</span>:<span style="color:var(--warn)">${v}</span>`).join(' &nbsp;')}</div>` : ''}
+      <div class="rec-meta">
+        <span class="worst-badge wb-${r.worst}">${r.worst}</span>
+        <span class="rec-date">${r.date} ${r.time}</span>
+      </div>
+      ${r.memo?`<div style="font-size:11px;color:var(--text2);margin-top:6px">📝 ${r.memo}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function deleteRecord(id){
+  if(!confirm('この記録を削除しますか？'))return;
+  st.records=st.records.filter(r=>r.id!==id);
+  persist(); updateBadge(); renderList();
+}
+
+// ── SUMMARY ──────────────────────────────────────────
+function renderSummary(){
+  const recs=st.records;
+  // キャスター総数カウント
+  let ngCount=0, warnCount=0;
+  recs.forEach(r=>Object.values(r.casters||{}).forEach(v=>{
+    if(v==='要交換')ngCount++;
+    if(v==='要注意')warnCount++;
+  }));
+  document.getElementById('s-total').textContent=recs.length;
+  document.getElementById('s-hospitals').textContent=new Set(recs.map(r=>r.hospital)).size;
+  document.getElementById('s-ng').textContent=ngCount;
+  document.getElementById('s-warn').textContent=warnCount;
+
+  // 位置別要交換
+  const posMap={};
+  CASTER_POSITIONS.forEach(({id,label})=>{
+    posMap[label]=recs.filter(r=>(r.casters||{})[id]==='要交換').length;
+  });
+  const posMax=Math.max(1,...Object.values(posMap));
+  document.getElementById('posStats').innerHTML=
+    Object.entries(posMap).map(([p,n])=>barRow(p,n,posMax,'var(--ng)')).join('')||
+    '<div style="color:var(--text2);font-size:13px">データなし</div>';
+
+  // 病院別
+  const hMap={};
+  recs.forEach(r=>{hMap[r.hospital]=(hMap[r.hospital]||0)+1;});
+  const hMax=Math.max(1,...Object.values(hMap));
+  document.getElementById('hospitalStats').innerHTML=
+    Object.entries(hMap).sort((a,b)=>b[1]-a[1]).map(([h,n])=>barRow(h,n,hMax,'var(--accent)')).join('')||
+    '<div style="color:var(--text2);font-size:13px">データなし</div>';
+}
+function barRow(label,val,max,color){
+  const pct=Math.round(val/max*100);
+  return `<div class="bar-label"><span>${label}</span><span style="font-family:'JetBrains Mono',monospace;font-weight:600">${val}</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+}
+
+// ── EXPORT ────────────────────────────────────────────
+function exportCSV(){
+  if(!st.records.length){ showToast('⚠️ データがありません',true); return; }
+  const allParts=st.parts;
+  const header=['日付','時刻','病院名','病棟','部屋番号','ベッド番号','型番',
+    '頭側・左','頭側・右','足側・左','足側・右','最悪状態',
+    ...allParts,'メモ'];
+  const rows=st.records.map(r=>{
+    const pc=allParts.map(p=>(r.partsSev&&r.partsSev[p])||'');
+    return[
+      r.date, r.time, r.hospital, r.ward||'', r.room||'', r.bed||'', r.model||'',
+      r.casters.HL||'', r.casters.HR||'', r.casters.FL||'', r.casters.FR||'',
+      r.worst||'', ...pc, r.memo||''
+    ];
+  });
+  const csv='\uFEFF'+[header,...rows].map(row=>row.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`キャスター調査_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'-')}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('📥 CSVをダウンロードしました');
+}
+function clearAll(){
+  if(!confirm('すべての記録を削除します。\n元に戻せません。'))return;
+  st.records=[]; persist(); updateBadge(); renderList(); renderSummary();
+  showToast('削除しました');
+}
+
+// ── HOSPITAL OPTIONS ──────────────────────────────────
+function renderHospitalOptions(){
+  ['inp-hospital','filter-hospital'].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    const val=el.value;
+    el.innerHTML=(id==='filter-hospital'?'<option value="">すべての病院</option>':'<option value="">選択してください</option>')
+      +st.hospitals.map(h=>`<option value="${h}">${h}</option>`).join('');
+    if(val) el.value=val;
+  });
+}
+// ── PARTS INPUT TABLE ─────────────────────────────────
+function renderPartsInputTable(){
+  document.getElementById('partsBody').innerHTML=st.parts.map(p=>`
+    <tr>
+      <td>${p}</td>
+      ${SEVS.map(s=>`
+        <td>
+          <button class="sev-chip ${formSev[p]===s?'a-'+s:''}" onclick="toggleSev('${p}','${s}')">
+            ${formSev[p]===s?'✓':'－'}
+          </button>
+        </td>`).join('')}
+    </tr>`).join('');
+}
+function toggleSev(part,sev){
+  formSev[part]=(formSev[part]===sev)?'':sev;
+  renderPartsInputTable();
+}
+
+// ── PARTS EDITOR ──────────────────────────────────────
+function renderPartsEditor(){
+  const c=document.getElementById('partsEditor');
+  if(!st.parts.length){c.innerHTML='<div style="color:var(--text2);font-size:13px;padding:8px 0">登録なし</div>';return;}
+  c.innerHTML=st.parts.map((p,i)=>`
+    <div class="part-row" id="pp-${i}">
+      <span class="part-label" id="pl-${i}">${p}</span>
+      <button class="icon-btn" onclick="editPart(${i})">✏️</button>
+      <button class="icon-btn" onclick="deletePart(${i})" style="color:var(--ng)">✕</button>
+    </div>`).join('');
+}
+function editPart(i){
+  if(document.getElementById('pi-'+i))return;
+  const span=document.getElementById('pl-'+i);
+  const inp=document.createElement('input');
+  inp.className='part-input';inp.id='pi-'+i;inp.value=st.parts[i];
+  inp.addEventListener('blur',()=>savePart(i));
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')savePart(i);});
+  span.replaceWith(inp);inp.focus();inp.select();
+}
+function savePart(i){
+  const inp=document.getElementById('pi-'+i);if(!inp)return;
+  const v=inp.value.trim();
+  if(v&&v!==st.parts[i]){
+    const old=st.parts[i];
+    st.records.forEach(r=>{
+      if(r.partsSev&&old in r.partsSev){r.partsSev[v]=r.partsSev[old];delete r.partsSev[old];}
+    });
+    st.parts[i]=v; persist(); showToast('更新しました');
+  }
+  renderPartsEditor(); renderPartsInputTable();
+}
+function deletePart(i){
+  if(!confirm(`「${st.parts[i]}」を削除しますか？`))return;
+  st.parts.splice(i,1); persist();
+  renderPartsEditor(); renderPartsInputTable(); showToast('削除しました');
+}
+function addPartMgr(){
+  const v=document.getElementById('new-part-mgr').value.trim();
+  if(!v||st.parts.includes(v)){showToast('⚠️ 入力を確認してください',true);return;}
+  st.parts.push(v); persist();
+  document.getElementById('new-part-mgr').value='';
+  renderPartsEditor(); renderPartsInputTable(); showToast('追加しました');
+}
+
+function renderHospitalsEditor(){
+  const c=document.getElementById('hospitalsEditor');
+  if(!st.hospitals.length){c.innerHTML='<div style="color:var(--text2);font-size:13px;padding:8px 0">登録なし</div>';return;}
+  c.innerHTML=st.hospitals.map((h,i)=>`
+    <div class="part-row" id="hr-${i}">
+      <span class="part-label" id="hl-${i}">${h}</span>
+      <button class="icon-btn" onclick="editHospital(${i})">✏️</button>
+      <button class="icon-btn" onclick="deleteHospital(${i})" style="color:var(--ng)">✕</button>
+    </div>`).join('');
+}
+function editHospital(i){
+  if(document.getElementById('hi-'+i))return;
+  const span=document.getElementById('hl-'+i);
+  const inp=document.createElement('input');
+  inp.className='part-input';inp.id='hi-'+i;inp.value=st.hospitals[i];
+  inp.addEventListener('blur',()=>saveHospital(i));
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')saveHospital(i);});
+  span.replaceWith(inp);inp.focus();inp.select();
+}
+function saveHospital(i){
+  const inp=document.getElementById('hi-'+i);if(!inp)return;
+  const v=inp.value.trim();
+  if(v&&v!==st.hospitals[i]){
+    const old=st.hospitals[i];
+    st.records.forEach(r=>{if(r.hospital===old)r.hospital=v;});
+    st.hospitals[i]=v; persist(); showToast('更新しました');
+  }
+  renderHospitalsEditor(); renderHospitalOptions();
+}
+function deleteHospital(i){
+  if(!confirm(`「${st.hospitals[i]}」を削除しますか？`))return;
+  st.hospitals.splice(i,1); persist();
+  renderHospitalsEditor(); renderHospitalOptions(); showToast('削除しました');
+}
+function addHospitalMgr(){
+  const v=document.getElementById('new-hospital-mgr').value.trim();
+  if(!v||st.hospitals.includes(v)){showToast('⚠️ 入力を確認してください',true);return;}
+  st.hospitals.push(v); persist();
+  document.getElementById('new-hospital-mgr').value='';
+  renderHospitalsEditor(); renderHospitalOptions(); showToast('追加しました');
+}
+
+// ── MODEL OPTIONS ────────────────────────────────────
+function renderModelOptions(){
+  const el=document.getElementById('inp-model'); if(!el)return;
+  const val=el.value;
+  el.innerHTML='<option value="">選択してください</option>'
+    +st.models.map(m=>`<option value="${m}">${m}</option>`).join('');
+  if(val) el.value=val;
+}
+function renderModelsEditor(){
+  const c=document.getElementById('modelsEditor');
+  if(!st.models.length){c.innerHTML='<div style="color:var(--text2);font-size:13px;padding:8px 0">登録なし</div>';return;}
+  c.innerHTML=st.models.map((m,i)=>`
+    <div class="part-row" id="mr-${i}">
+      <span class="part-label" id="ml-${i}">${m}</span>
+      <button class="icon-btn" onclick="editModel(${i})">✏️</button>
+      <button class="icon-btn" onclick="deleteModel(${i})" style="color:var(--ng)">✕</button>
+    </div>`).join('');
+}
+function editModel(i){
+  if(document.getElementById('mi-'+i))return;
+  const span=document.getElementById('ml-'+i);
+  const inp=document.createElement('input');
+  inp.className='part-input';inp.id='mi-'+i;inp.value=st.models[i];
+  inp.addEventListener('blur',()=>saveModel(i));
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')saveModel(i);});
+  span.replaceWith(inp);inp.focus();inp.select();
+}
+function saveModel(i){
+  const inp=document.getElementById('mi-'+i);if(!inp)return;
+  const v=inp.value.trim();
+  if(v&&v!==st.models[i]){
+    const old=st.models[i];
+    st.records.forEach(r=>{if(r.model===old)r.model=v;});
+    st.models[i]=v; persist(); showToast('更新しました');
+  }
+  renderModelsEditor(); renderModelOptions();
+}
+function deleteModel(i){
+  if(!confirm(`「${st.models[i]}」を削除しますか？`))return;
+  st.models.splice(i,1); persist();
+  renderModelsEditor(); renderModelOptions(); showToast('削除しました');
+}
+function addModelMgr(){
+  const v=document.getElementById('new-model-mgr').value.trim();
+  if(!v||st.models.includes(v)){showToast('⚠️ 入力を確認してください',true);return;}
+  st.models.push(v); persist();
+  document.getElementById('new-model-mgr').value='';
+  renderModelsEditor(); renderModelOptions(); showToast('追加しました');
+}
+
+// ── TOAST ────────────────────────────────────────────
+let toastTimer;
+function showToast(msg,warn=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=warn?'var(--warn)':'var(--ok)';
+  t.style.color=warn?'#111':'#111';
+  t.classList.add('show'); clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2400);
+}
+</script>
+</body>
+</html>
